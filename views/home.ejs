@@ -1,0 +1,65 @@
+<%- include('./partials/header.ejs') %>
+        <header>
+            <h1>Home Page</h1>
+        </header>
+        <nav>
+            <% if(username) { %>
+                <h2> Welcome <%= username %> </h2>
+                <a href="/logout">Logout</a>
+                <form>
+                    <h3>Change Password</h3>
+                    <label for="oldpwd">Old password</label>
+                    <input type="password" placeholder="Enter your old password" name="oldpwd" required />
+                    <br />
+                    <label for="newpwd">New Password</label>
+                    <input type="password" placeholder="Enter your new password" name="newpwd" required />
+                    <br />
+                    <label for="confpwd">Confirm Password</label>
+                    <input type="password" placeholder="Confirm your new password" name="confpwd" required />
+                    <div class="password error"></div>
+                    <button>Submit</button>
+                </form>
+                <script>
+                    const form = document.querySelector('form')
+                    const passwordError = document.querySelector('.password.error')
+                    form.addEventListener('submit', e => {
+                        e.preventDefault()
+                        passwordError.textContent = ''
+                        const oldPassword = form.oldpwd.value
+                        const newPassword = form.newpwd.value
+                        const confPassword = form.confpwd.value
+                        if(newPassword === confPassword) {
+                            fetch('/graphql', {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    query: `mutation passwd($oldPassword: String!, $newPassword: String!) {
+                                        passwd(oldPassword: $oldPassword, newPassword: $newPassword) {
+                                            token
+                                            password
+                                        }
+                                    }`,
+                                    variables: {
+                                        oldPassword,
+                                        newPassword
+                                    }
+                                }),
+                                headers: {
+                                    "Content-Type": "application/json"
+                                }
+                            }).then(res => res.json()).then(res => {
+                                console.log(res)
+                            }).catch(err => {
+                                console.log(err)
+                            })
+                        }
+                    })
+                </script>
+            <% } else { %>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            <% } %>
+        </nav>
+        <main>
+            <a href="/moviexplorer">MovieXplorer</a>
+        </main>
+<%- include('./partials/footer.ejs') %>

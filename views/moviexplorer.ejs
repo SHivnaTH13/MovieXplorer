@@ -1,0 +1,643 @@
+<%- include('./partials/header.ejs') %>
+        <header>
+            <h1>MovieXplorer</h1>
+        </header>
+        <nav>
+            <% if(username) { %>
+                <h2> Welcome <%= username %> </h2>
+                <a href="/logout">Logout</a>
+            <% } else { %>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            <% } %>
+            <a href="/">Home</a>
+        </nav>
+        <main>
+            <h3>Movie Form</h3>
+            <form id="movie">
+                <label for="title">Title</label>
+                <input type="text" placeholder="Enter movie title" name="title" required />
+                <div class="title error"></div>
+                <label for="description">Description</label>
+                <input type="text" placeholder="Enter movie description" name="description" required />
+                <div class="description error"></div>
+                <label for="director">Director</label>
+                <input type="text" placeholder="Enter director's name" name="director" required />
+                <div class="director error"></div>
+                <label for="releaseDate">Release Date</label>
+                <input type="datetime-local" name="releaseDate" required />
+                <div class="releaseDate error"></div>
+                <button>Submit</button>
+            </form>
+            <h3>Movie Reviews</h3>
+            <form id="reviews">
+                <label for="mid">Movie Id</label>
+                <input type="number" name="mid" required />
+                <div class="mid error"></div>
+                <label for="rating">Movie Rating</label>
+                <input type="number" name="rating" step="0.1" min="0" max="5" required />
+                <div class="rating error"></div>
+                <label for="comment">Comment</label>
+                <input type="text" placeholder="Enter your comment" name="comment" required />
+                <div class="comment error"></div>
+                <button>Submit</button>
+            </form>
+            <div>
+                <label for="searchMovies">Search Movies</label>
+                <input id="searchMovies" type="text" placeholder="Type something" name="searchMovies" onkeyup="searchMovies(event)" />
+                <div class="output movies"></div>
+            </div>
+            <div>
+                <label for="searchReviews">Search Reviews</label>
+                <input id="searchReviews" type="text" placeholder="Type something" name="searchReviews" onkeyup="searchReviews(event)" />
+                <div class="output reviews"></div>
+            </div>
+            <script>
+                const movie =document.querySelector('#movie')
+                const titleError = document.querySelector('.title.error')
+                const descriptionError = document.querySelector('.description.error')
+                const directorError = document.querySelector('.director.error')
+                const releaseDateError = document.querySelector('.releaseDate.error')
+                movie.addEventListener('submit', e => {
+                    e.preventDefault()
+                    titleError.textContent = ''
+                    descriptionError.textContent = ''
+                    directorError.textContent = ''
+                    releaseDateError.textContent = ''
+                    const title = movie.title.value
+                    const description = movie.description.value
+                    const director = movie.director.value
+                    let releaseDate = movie.releaseDate.value
+                    releaseDate = releaseDate.slice(0, 10)
+                    fetch('/graphql', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            query: `mutation addMovie($title: String!, $description: String!, $director: String!, $releaseDate: String!){
+                                        addMovie(title: $title, description: $description, director: $director, releaseDate: $releaseDate) {
+                                            error
+                                            title
+                                            description
+                                            director
+                                            releaseDate
+                                        }
+                                    }`,
+                            variables: {
+                                title,
+                                description,
+                                director,
+                                releaseDate
+                            }
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }).then(res => res.json()).then(res => {
+                        const addMovie = res.data.addMovie
+                        console.log(addMovie)
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                })
+
+                const reviews = document.querySelector('#reviews')
+                const midError = document.querySelector('.mid.error')
+                const ratingError = document.querySelector('.rating.error')
+                const commentError = document.querySelector('.comment.error')
+                reviews.addEventListener('submit', e => {
+                    e.preventDefault()
+                    midError.textContent = ''
+                    ratingError.textContent = ''
+                    commentError.textContent = ''
+                    let movieId = reviews.mid.value
+                    let rating = reviews.rating.value
+                    const comment = reviews.comment.value
+                    movieId = Number(movieId)
+                    rating = Number(rating)
+                    fetch('/graphql', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            query: `mutation addReview($movieId: Int!, $rating: Float!, $comment: String!){
+                                        addReview(movieId: $movieId, rating: $rating, comment: $comment) {
+                                            error
+                                            movieId
+                                            rating
+                                            comment
+                                        }
+                                    }`,
+                            variables: {
+                                movieId,
+                                rating,
+                                comment
+                            }
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }).then(res => res.json()).then(res => {
+                        console.log(res)
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                })
+
+                function getMovies(ev) {
+                    fetch('/graphql', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            query: `query searchMovies($query: String!, $entry: Int!, $page: Int!){
+                                        searchMovies(query: $query, entry: $entry, page: $page) {
+                                            error
+                                            movies {
+                                                title
+                                                description
+                                                director
+                                                releaseDate
+                                            }
+                                        }
+                                    }`,
+                            variables: {
+                                query: ev.target.value,
+                                entry: 5,
+                                page: 0
+                            }
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }).then(res => res.json()).then(res => {
+                        const movies = res.data.searchMovies.movies
+                        const odiv = document.querySelector('.output.movies')
+                        if(movies.length > 0) {
+                            const table = document.createElement('table')
+                            table.setAttribute("id","table")
+                            const tr = document.createElement('tr')
+                            const th = document.createElement('th')
+                            th.textContent = "title"
+                            const th2 = document.createElement('th')
+                            th2.textContent = "description"
+                            const th3 = document.createElement('th')
+                            th3.textContent = "director"
+                            const th4 = document.createElement('th')
+                            th4.textContent = "releaseDate"
+                            tr.appendChild(th)
+                            tr.appendChild(th2)
+                            tr.appendChild(th3)
+                            tr.appendChild(th4)
+                            table.appendChild(tr)
+                            movies.forEach(value => {
+                                const tr = document.createElement('tr')
+                                const td1 = document.createElement('td')
+                                td1.innerText = value.title
+                                const td2 = document.createElement('td')
+                                td2.innerText = value.description
+                                const td3 = document.createElement('td')
+                                td3.innerText = value.director
+                                const td4 = document.createElement('td')
+                                td4.innerText = value.releaseDate
+                                tr.appendChild(td1)
+                                tr.appendChild(td2)
+                                tr.appendChild(td3)
+                                tr.appendChild(td4)
+                                table.appendChild(tr)
+                            })
+                            odiv.appendChild(table)
+                            const prev = document.createElement('button')
+                            prev.textContent = "prev"
+                            const next = document.createElement('button')
+                            next.textContent = "next"
+                            let slide = 0
+                            odiv.appendChild(prev)
+                            odiv.appendChild(next)
+                            next.addEventListener('click', e2 => {
+                                e2.preventDefault()
+                                slide += 5
+                                fetch('/graphql', {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        query: `query searchMovies($query: String!, $entry: Int!, $page: Int!){
+                                                    searchMovies(query: $query, entry: $entry, page: $page) {
+                                                        error
+                                                        movies {
+                                                            title
+                                                            description
+                                                            director
+                                                            releaseDate
+                                                        }
+                                                    }
+                                                }`,
+                                        variables: {
+                                            query: ev.target.value,
+                                            entry: 5,
+                                            page: slide
+                                        }
+                                    }),
+                                    headers: {
+                                        "Content-Type": "application/json"
+                                    }
+                                }).then(res => res.json()).then(res => {
+                                    console.log(res)
+                                    const movies = res.data.searchMovies.movies
+                                    const odiv = document.querySelector('.output.movies')
+                                    const table = document.getElementById('table')
+                                    const tupdate = document.createElement('table')
+                                    tupdate.setAttribute("id", "table")
+                                    const tr = document.createElement('tr')
+                                    const th = document.createElement('th')
+                                    th.textContent = "title"
+                                    const th2 = document.createElement('th')
+                                    th2.textContent = "description"
+                                    const th3 = document.createElement('th')
+                                    th3.textContent = "director"
+                                    const th4 = document.createElement('th')
+                                    th4.textContent = "releaseDate"
+                                    tr.appendChild(th)
+                                    tr.appendChild(th2)
+                                    tr.appendChild(th3)
+                                    tr.appendChild(th4)
+                                    tupdate.appendChild(tr)
+                                    if(movies.length > 0) {
+                                        movies.forEach(value => {
+                                            const tr = document.createElement('tr')
+                                            const td1 = document.createElement('td')
+                                            td1.innerText = value.title
+                                            const td2 = document.createElement('td')
+                                            td2.innerText = value.description
+                                            const td3 = document.createElement('td')
+                                            td3.innerText = value.director
+                                            const td4 = document.createElement('td')
+                                            td4.innerText = value.releaseDate
+                                            tr.appendChild(td1)
+                                            tr.appendChild(td2)
+                                            tr.appendChild(td3)
+                                            tr.appendChild(td4)
+                                            tupdate.appendChild(tr)
+                                        })
+                                        odiv.replaceChild(tupdate, table)
+                                    } else {
+                                        slide -= 10
+                                    }
+                                }).catch(err => {
+                                    console.log(err)
+                                })
+                            })
+                            prev.addEventListener('click', e2 => {
+                                e2.preventDefault()
+                                slide -= 5
+                                fetch('/graphql', {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        query: `query searchMovies($query: String!, $entry: Int!, $page: Int!){
+                                                    searchMovies(query: $query, entry: $entry, page: $page) {
+                                                        error
+                                                        movies {
+                                                            title
+                                                            description
+                                                            director
+                                                            releaseDate
+                                                        }
+                                                    }
+                                                }`,
+                                        variables: {
+                                            query: ev.target.value,
+                                            entry: 5,
+                                            page: slide
+                                        }
+                                    }),
+                                    headers: {
+                                        "Content-Type": "application/json"
+                                    }
+                                }).then(res => res.json()).then(res => {
+                                    console.log(res)
+                                    const movies = res.data.searchMovies.movies
+                                    const odiv = document.querySelector('.output.movies')
+                                    const table = document.getElementById('table')
+                                    const tupdate = document.createElement('table')
+                                    tupdate.setAttribute("id", "table")
+                                    const tr = document.createElement('tr')
+                                    const th = document.createElement('th')
+                                    th.textContent = "title"
+                                    const th2 = document.createElement('th')
+                                    th2.textContent = "description"
+                                    const th3 = document.createElement('th')
+                                    th3.textContent = "director"
+                                    const th4 = document.createElement('th')
+                                    th4.textContent = "releaseDate"
+                                    tr.appendChild(th)
+                                    tr.appendChild(th2)
+                                    tr.appendChild(th3)
+                                    tr.appendChild(th4)
+                                    tupdate.appendChild(tr)
+                                    if(movies.length > 0) {
+                                        movies.forEach(value => {
+                                            const tr = document.createElement('tr')
+                                            const td1 = document.createElement('td')
+                                            td1.innerText = value.title
+                                            const td2 = document.createElement('td')
+                                            td2.innerText = value.description
+                                            const td3 = document.createElement('td')
+                                            td3.innerText = value.director
+                                            const td4 = document.createElement('td')
+                                            td4.innerText = value.releaseDate
+                                            tr.appendChild(td1)
+                                            tr.appendChild(td2)
+                                            tr.appendChild(td3)
+                                            tr.appendChild(td4)
+                                            tupdate.appendChild(tr)
+                                        })
+                                        odiv.replaceChild(tupdate, table)
+                                    } else {
+                                        slide += 10
+                                    }
+                                }).catch(err => {
+                                    console.log(err)
+                                })
+                            })
+                        } else {
+                            odiv.textContent = res.data.searchMovies.error
+                        }
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                }
+
+                function getReviews(ev) {
+                    fetch('/graphql', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            query: `query searchReviews($query: String!, $entry: Int!, $page: Int!){
+                                        searchReviews(query: $query, entry: $entry, page: $page) {
+                                            error
+                                            reviews {
+                                                id
+                                                movieId
+                                                rating
+                                                comment
+                                                movie {
+                                                    title
+                                                    description
+                                                    director
+                                                    releaseDate
+                                                }
+                                                user {
+                                                    username
+                                                }
+                                            }
+                                        }
+                                    }`,
+                            variables: {
+                                query: ev.target.value,
+                                entry: 5,
+                                page: 0
+                            }
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }).then(res => res.json()).then(res => {
+                        console.log(res)
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                }
+                function addDelay(fn, delay) {
+                    let timer
+                    return function (...args) {
+                        clearTimeout(timer)
+                        timer = setTimeout(() => {
+                            fn.apply(this, [...args])
+                        }, delay)
+                    }
+                }
+                const searchMovies = addDelay(getMovies, 800)
+                const searchReviews = addDelay(getReviews, 800)
+            </script>
+            <form id="delMov">
+                <h3>Delete Movie</h3>
+                <label for="movieId">Movie ID</label>
+                <input type="number" placeholder="Enter movieId" name="movieId" required />
+                <div class="deleteM error"></div>
+                <button>Submit</button>
+            </form>
+            <form id="delRev">
+                <h3>Delete Review</h3>
+                <label for="reviewId">Movie ID</label>
+                <input type="number" placeholder="Enter reviewId" name="reviewId" required />
+                <div class="deleteR error"></div>
+                <button>Submit</button>
+            </form>
+            <script>
+                const delMov = document.getElementById('delMov')
+                const delMovError = document.querySelector('.deleteM.error')
+                delMov.addEventListener('submit', e => {
+                    e.preventDefault()
+                    delMovError.textContent = ''
+                    let movieId = delMov.movieId.value
+                    movieId = Number(movieId)
+                    fetch('/graphql', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            query: `mutation removeMovieData($removeMovieDataId: Int!){
+                                        removeMovieData(id: $removeMovieDataId) {
+                                            error
+                                            title
+                                            description
+                                            director
+                                            releaseDate
+                                        }
+                                    }`,
+                            variables: {
+                                removeMovieDataId: movieId
+                            }
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }).then(res => res.json()).then(res => {
+                        console.log(res)
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                })
+
+                const delRev = document.getElementById('delRev')
+                const delRevError = document.querySelector('.deleteR.error')
+                delRev.addEventListener('submit', e => {
+                    e.preventDefault()
+                    delRevError.textContent = ''
+                    let reviewId = delRev.reviewId.value
+                    reviewId = Number(reviewId)
+                    fetch('/graphql', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            query: `mutation removeReview($removeReviewId: Int!){
+                                        removeReview(id: $removeReviewId) {
+                                            error
+                                            rating
+                                            comment
+                                            user {
+                                                username
+                                            }
+                                            movie {
+                                                id
+                                                title
+                                                description
+                                                director
+                                                releaseDate
+                                            }
+                                        }
+                                    }`,
+                            variables: {
+                                removeReviewId: reviewId
+                            }
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }).then(res => res.json()).then(res => {
+                        console.log(res)
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                })
+            </script>
+            <h3>Movie Update Form</h3>
+            <form id="updateM">
+                <label for="mid">Movie Id</label>
+                <input type="number" placeholder="Enter movie id" name="mid" required />
+                <div class="movId error"></div>
+                <label for="title">Title</label>
+                <input type="text" placeholder="Update movie title" name="title" />
+                <div class="titleU error"></div>
+                <label for="description">Description</label>
+                <input type="text" placeholder="Update movie description" name="description" />
+                <div class="descriptionU error"></div>
+                <label for="director">Director</label>
+                <input type="text" placeholder="Update director's name" name="director" />
+                <div class="directorU error"></div>
+                <label for="releaseDate">Update Release Date</label>
+                <input type="datetime-local" name="releaseDate" />
+                <div class="releaseDateU error"></div>
+                <button>Submit</button>
+            </form>
+            <script>
+                const updateM = document.querySelector('#updateM')
+                const titleUError = document.querySelector('.titleU.error')
+                const descriptionUError = document.querySelector('.descriptionU.error')
+                const directorUError = document.querySelector('.directorU.error')
+                const releaseDateUError = document.querySelector('.releaseDateU.error')
+                updateM.addEventListener('submit', e => {
+                    e.preventDefault()
+                    titleUError.textContent = ''
+                    descriptionUError.textContent = ''
+                    directorUError.textContent = ''
+                    releaseDateUError.textContent = ''
+                    let movieId = updateM.mid.value
+                    const title = updateM.title.value
+                    const description = updateM.description.value
+                    const director = updateM.director.value
+                    let releaseDate = updateM.releaseDate.value
+                    releaseDate = releaseDate.slice(0, 10)
+                    movieId = Number(movieId)
+                    fetch('/graphql', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            query: `mutation updateMovie($movieData: MovieData!){
+                                        updateMovieData(movieData: $movieData) {
+                                            error
+                                            title
+                                            description
+                                            director
+                                            releaseDate
+                                        }
+                                    }`,
+                            variables: {
+                                movieData: {
+                                    id: movieId,
+                                    title,
+                                    description,
+                                    director,
+                                    releaseDate
+                                }
+                            }
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }).then(res => res.json()).then(res => {
+                        const movie = res.data
+                        console.log(movie)
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                })
+            </script>
+            <h3>Update Movie Reviews</h3>
+            <form id="updateR">
+                <label for="rid">Review Id</label>
+                <input type="number" name="rid" required />
+                <div class="rid error"></div>
+                <label for="rating">Update Movie Rating</label>
+                <input type="number" name="rating" step="0.1" min="0" max="5" />
+                <div class="ratingU error"></div>
+                <label for="comment">Comment</label>
+                <input type="text" placeholder="Update your comment" name="comment" />
+                <div class="commentU error"></div>
+                <button>Submit</button>
+            </form>
+            <script>
+                const updateR = document.querySelector('#updateR')
+                const ridError = document.querySelector('.rid.error')
+                const ratingUError = document.querySelector('.ratingU.error')
+                const commentUError = document.querySelector('.commentU.error')
+                updateR.addEventListener('submit', e => {
+                    e.preventDefault()
+                    ridError.textContent = ''
+                    ratingError.textContent = ''
+                    commentError.textContent = ''
+                    let reviewId = updateR.rid.value
+                    let rating = updateR.rating.value
+                    const comment = updateR.comment.value
+                    reviewId = Number(reviewId)
+                    rating = Number(rating)
+                    fetch('/graphql', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            query: `mutation updateReview($reviewData: ReviewData!){
+                                        updateReviewData(reviewData: $reviewData) {
+                                            error
+                                            id
+                                            rating
+                                            comment
+                                            user {
+                                                username
+                                            }
+                                            movie {
+                                                id
+                                                title
+                                                description
+                                                director
+                                                releaseDate
+                                            }
+                                        }
+                                    }`,
+                            variables: {
+                                reviewData: {
+                                    id: reviewId,
+                                    rating,
+                                    comment,
+                                }
+                            }
+                        }),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }).then(res => res.json()).then(res => {
+                        const review = res.data
+                        console.log(review)
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                })
+            </script>
+        </main>
+<%- include('./partials/footer.ejs') %>

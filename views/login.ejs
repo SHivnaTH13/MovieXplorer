@@ -1,0 +1,57 @@
+<%- include('./partials/header.ejs') %>
+        <form>
+            <label for="email">Email</label>
+            <input type="email" placeholder="Enter your email id" name="email" required />
+            <div class="email error"></div>
+            <label for="password">Password</label>
+            <input type="password" placeholder="Enter your password" name="password" required />
+            <div class="password error"></div>
+            <button>Submit</button>
+        </form>
+        <script>
+            const form = document.querySelector('form')
+            const emailError = document.querySelector('.email.error')
+            const passwordError = document.querySelector('.password.error')
+            form.addEventListener('submit', e => {
+                e.preventDefault()
+                emailError.textContent = ""
+                passwordError.textContent = ""
+                const email = form.email.value
+                const password = form.password.value
+                fetch('/graphql', {
+                    method : 'POST',
+                    body : JSON.stringify({
+                        query: `mutation login($email: String!, $password: String!){
+                                    login(email: $email, password: $password) {
+                                        errors {
+                                            username
+                                            email
+                                            password
+                                        }
+                                        username
+                                    }
+                                }`,
+                        variables: {
+                            email,
+                            password
+                        }
+                    }),
+                    headers : {
+                        "Content-Type": "application/json"
+                    }
+                }).then(res => {
+                    return res.json()
+                }).then(res => {
+                    const login = res.data.login
+                    if(login.username !== '') {
+                        location.assign('/')
+                    } else {
+                        emailError.textContent = login.errors.email
+                        passwordError.textContent = login.errors.password
+                    }
+                }).catch(err => {
+                    console.log(err)
+                })
+            })
+        </script>
+<%- include('./partials/footer.ejs') %>

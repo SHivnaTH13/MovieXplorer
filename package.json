@@ -1,0 +1,44 @@
+{
+  "name": "moviexplorer",
+  "version": "1.0.0",
+  "description": "Movie Explorer is a simple website build using Prisma as a ORM for PostgreSQL with Apollo GraphQL library to implement the GraphQL API. This website uses JWT for providing Token based Authentication system.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Prisma",
+    "PostgreSQL",
+    "Apollo",
+    "GraphQL",
+    "API",
+    "JWT",
+    "Authentication",
+    "TypeScript"
+  ],
+  "author": "SHivnaTH13",
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^4.7.0",
+    "@prisma/client": "^4.13.0",
+    "bcrypt": "^5.1.0",
+    "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "graphql": "^16.6.0",
+    "graphql-middleware": "^6.1.33",
+    "jsonwebtoken": "^9.0.0",
+    "validator": "^13.9.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.0",
+    "@types/cookie-parser": "^1.4.3",
+    "@types/cors": "^2.8.13",
+    "@types/jsonwebtoken": "^9.0.2",
+    "@types/node": "^18.16.3",
+    "@types/validator": "^13.7.15"
+  }
+}
